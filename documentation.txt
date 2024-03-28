@@ -1,0 +1,122 @@
+##VALUE STRUCTURE##
+
+[value][operator][value][operator][...]
+
+
+#VALUES#
+
+Surround specific value with its corresponding surrounder
+
+String: sValues
+Character: cHc
+Integer: i42i
+Double: d4.2d
+Boolean: btrueb
+
+Special cases:
+-UPPERCASE variable name
+-u: user input (automatically gets converted into the appropriate type)
+
+String/Character escape sequences:
+
+gn: newline
+gl: space (spaces are not allowed)
+gs: 's' (single use s would end the string)
+gc: 'c' (single use c would end the character)
+gg: 'g' (single use g would indicate escape sequence)
+
+
+#OPERATORS#
+
+p: plus (addition)
+m: minus (subtraction)
+n: times (multiplication)
+q: divide (division)
+y: modulo (modulation??)
+
+Notice: Operator precedence does not exist! Values get evaluated from left to right! Always!
+
+
+
+##CONDITION STRUCTURE##
+
+[value][condOp][value]([chainOp][value][condOp][value][...]) <- optional
+
+
+#CONDITIONAL OPERATORS#
+
+et: equal to (==)
+at: not equal to (!=)
+gt: greater than (>)
+get: greater than or equal to (>=)
+lt: less than (<)
+let: less than or equal to (<=)
+
+
+#CHAIN OPERATORS#
+
+a: and (&&)
+o: or (||)
+x: xor (^)
+
+When chaining chain operators, the conditions get evaluated to true or false and then chained from left to right to produce one final result.
+Example: 2 < 3 && 4 >= 1 || 6 < 5
+         2 < 3 -> true
+                  4 >= 1 -> true
+          true && true -> true
+                            6 < 5 -> false
+                    true || false -> true
+
+
+
+##INSTRUCTIONS##
+
+#VARIABLE INITIALIZATION#
+
+v[name]e[value]l
+
+Variable names must be UPPERCASE!
+
+
+#VARIABLE MODIFICATION#
+
+[name][op][value]l
+
+Operators:
+
+pe: plus equals (+=)
+me: minus equals (-=)
+ne: times equals (*=)
+qe: divide equals (/=)
+ye: modulo equals (%=)
+
+Special Cases:
+
+pp: plus plus (++)
+mm: minus minus (--)
+
+Increases/decreases value by one -> [value] part omitted
+
+
+#PRINT TO SCREEN#
+
+h[value]l
+
+
+#PROGRAM EXIT#
+
+xl
+
+
+#IF#
+
+j[condition]t[further instructions]z
+
+Optional: after z: et[further instructions]z -> else block (gets executed if condition fails)
+
+Note: Opening a code body with t makes a new scope, meaning variables defined within this block cannot be used outside of it.
+
+
+#WHILE#
+
+r[condition]t[further instructions]z

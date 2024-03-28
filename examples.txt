@@ -1,0 +1,14 @@
+print 42 42 times:
+vVARei1ilrVARlti43ithVARps:gl42slVARpplzxl
+
+weird sequence:
+vRESTei0ilvNUMeulrNUMgti1itRESTeNUMyi2iljRESTeti0itNUMqei2ilzetNUMei3inNUMpi1ilzhNUMlzxl
+
+greatest common divisor:
+vAeulvBeulvRei0ilrAati0itReAyBljReti0ithBlxlzAeBlBeRlzxl
+
+factorials:
+vNUMei1ilvNeulrNgti0itNUMneNlNmei1ilzhNUMlxl
+
+fibonacci:
+vNeuljNeti1iths1slxlzhs1gn1sljNeti2itxlzvFei0ilvFOei1ilvFTei1ilvIei3ilrIltNpi1itFeFOpFTlFOeFTlFTeFlIpplhFlzxl
