@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="lettercode:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/lettercode_jar</output-path>
+    <root id="archive" name="lettercode.jar">
+      <element id="module-output" name="lettercode" />
+    </root>
+  </artifact>
+</component>
