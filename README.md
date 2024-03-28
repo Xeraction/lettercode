@@ -12,7 +12,7 @@ It should have everything neatly formatted.
 
 ## Usage
 
-    cd <directory with the Lettercode.jar file>
+    cd <directory with the lettercode.jar file>
     java -jar Lettercode.jar <path to lettercode file>
 
 Easy as that!<br>
