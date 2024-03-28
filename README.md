@@ -13,7 +13,7 @@ It should have everything neatly formatted.
 ## Usage
 
     cd <directory with the lettercode.jar file>
-    java -jar Lettercode.jar <path to lettercode file>
+    java -jar lettercode.jar <path to lettercode file>
 
 Easy as that!<br>
 Note that you need Java 21 for it to work. If you don't have that yet, go and install it, boomer.
