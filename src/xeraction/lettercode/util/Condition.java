@@ -141,10 +141,12 @@ public class Condition {
             Value second = this.second.clone();
             first.evaluate();
             second.evaluate();
-            //make sure the compared types are the same
-            //TODO possibility for int/double comparisons
-            if (first.getType() != second.getType())
-                Lettercode.error("Cannot compare two different variable types! (" + first.getType().name() + ", " + second.getType().name() + ")");
+            //make sure the compared types are compatible (can compare everything except string and other types)
+            if (first.getType() != second.getType()) {
+                if ((first.getType() == Value.Type.STRING && second.getType() != Value.Type.STRING)
+                        || (first.getType() != Value.Type.STRING && second.getType() == Value.Type.STRING))
+                    Lettercode.error("Cannot compare these variable types: " + first.getType().name() + " and " + second.getType().name());
+            }
             //do the comparisons
             switch (first.getType()) {
                 case INT, DOUBLE, CHAR, BOOLEAN -> {
