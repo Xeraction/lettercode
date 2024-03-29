@@ -104,6 +104,15 @@ Structure: r(condition)t(code)z<br>
 Example: rVARleti42itVARpplz<br>
 Increases the variable "var" by one until it equals 42.
 
+### f = for
+Executes a block of code continually while a condition is true with options for counter variables.
+Structure: f(top1)k(condition)k(top2)t(code)z<br>
+top1 can only be variable initializations and/or modifications<br>
+top2 can only be variable modifications<br>
+Multiple instructions are separated by their ending "l"<br>
+Example: fvVAR1ei1ilvVAR2ei10ilkVAR1ltVAR2kVAR1pplVAR2mmltz<br>
+Increases var1 and decreases var2 while var1 is less than var2
+
 ### Scopes:
 When a new code body is opened, for example with an if statement, this code body also opens
 a new scope. When you define a variable inside a scope, this variable cannot be accessed outside

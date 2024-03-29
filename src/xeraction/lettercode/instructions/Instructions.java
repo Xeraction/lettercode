@@ -19,6 +19,7 @@ public class Instructions {
         instructions.add(new PrintInstruction());
         instructions.add(new IfInstruction());
         instructions.add(new WhileInstruction());
+        instructions.add(new ForInstruction());
     }
 
     /**

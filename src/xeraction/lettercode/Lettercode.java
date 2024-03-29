@@ -79,18 +79,7 @@ public class Lettercode {
                 return instructions;
             }
 
-            //check if it is a variable modification (uppercase variable name)
-            if (Character.isUpperCase(iterator.current())) {
-                Instruction inst = new VarModifyInstruction();
-                instructions.add(inst.parse(iterator));
-                continue;
-            }
-
-            //parse the current instruction
-            Instruction inst = Instructions.get(iterator.current());
-            if (inst == null)
-                error("Unknown instruction", iterator);
-            instructions.add(inst.parse(iterator));
+            instructions.add(parseInstruction(iterator));
         }
 
         //got to the end of the code before the current body was closed
@@ -98,6 +87,25 @@ public class Lettercode {
             Lettercode.error("Unclosed code body", iterator);
 
         return instructions;
+    }
+
+    /**
+     * Parses one instruction
+     * @param iterator The iterator with its position at the first character of the instruction
+     * @return The parsed instruction
+     */
+    public static Instruction parseInstruction(StringIterator iterator) {
+        //check if it is a variable modification (uppercase variable name)
+        if (Character.isUpperCase(iterator.current())) {
+            Instruction inst = new VarModifyInstruction();
+            return inst.parse(iterator);
+        }
+
+        //parse the current instruction
+        Instruction inst = Instructions.get(iterator.current());
+        if (inst == null)
+            error("Unknown instruction", iterator);
+        return inst.parse(iterator);
     }
 
     /**
