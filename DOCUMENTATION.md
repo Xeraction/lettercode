@@ -41,7 +41,7 @@ Initializes a new variable.<br>
 Example: vVARei42il (let var = 42;)
 
 ### Rules for variables:
-Variable names must be uppercase.
+Variable names must be uppercase. They can contain numbers, but the first character must be an uppercase letter.
 - e = **=** (Used to assign a value to variables)<br>Example: vVAR**e**sHisl (let var **=** "Hi";)
 - p = **+** (Used for addition)<br>Example: vVARei4i**p**i2il (let var = 4 **+** 2;)
 - m = **-** (Used for subtraction)<br>Example: vVARei4i**m**i2il (let var = 4 **-** 2;)

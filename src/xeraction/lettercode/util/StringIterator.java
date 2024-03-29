@@ -114,9 +114,8 @@ public class StringIterator {
      */
     public String getVarName(boolean toPrevious) {
         String s = "";
-        //stop when letters are no longer uppercase
-        //TODO support for numbers in name
-        while (Character.isUpperCase(current())) {
+        //stop when letters are no longer uppercase or numbers
+        while (Character.isUpperCase(current()) || Character.isDigit(current())) {
             s += current();
             next();
         }
