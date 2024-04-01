@@ -90,13 +90,16 @@ public class Value {
 
     /**
      * Evaluates this value
+     * @return The evaluated value as a new instance or itself if already evaluated
      */
-    public void evaluate() {
+    public Value evaluate() {
         if (evaluated)
-            return;
+            return this;
+        //evaluate a cloned value to allow for multiple evaluations with changed variable contents
+        Value v = clone();
         Couple<Type, String> tv = new Couple<>(Type.UNKNOWN, "");
         //combine all values into tv in order
-        for (ValuePart part : parts) {
+        for (ValuePart part : v.parts) {
             Type t = part.type();
             if (t != tv.first()) {
                 //check for cases that need extra processing
@@ -107,12 +110,12 @@ public class Value {
                     }
                     case VAR -> {
                         String name = ((VarPart)part).name;
-                        Variable v = VariableManager.get(name);
-                        if (v == null)
+                        Variable var = VariableManager.get(name);
+                        if (var == null)
                             Lettercode.error("Unknown variable: " + name);
-                        if (!v.getValue().hasEvaluated())
+                        if (!var.getValue().hasEvaluated())
                             Lettercode.error("Variable has not been evaluated yet? Probably not your fault...");
-                        tv = combine(tv, v.getValue().toStringValue(), v.getValue().getType(), part.operator());
+                        tv = combine(tv, var.getValue().toStringValue(), var.getValue().getType(), part.operator());
                     }
                     default -> tv = combine(tv, part.toString(), t, part.operator());
                 }
@@ -121,9 +124,10 @@ public class Value {
             }
         }
         //final value is tv -> remove all parts, replace with tv -> evaluation done
-        parts.removeIf(p -> true);
-        parts.add(constructPart(tv.first(), tv.second()));
-        evaluated = true;
+        v.parts.removeIf(p -> true);
+        v.parts.add(constructPart(tv.first(), tv.second()));
+        v.evaluated = true;
+        return v;
     }
 
     /**
@@ -330,7 +334,10 @@ public class Value {
         parts.add(first);
         for (int i = 1; i < value.parts.size(); i++)
             parts.add(value.parts.get(i));
-        evaluate();
+        //unfortunate workaround but whatever
+        Value v = evaluate();
+        parts = v.parts;
+        evaluated = true;
     }
 
     public boolean hasEvaluated() {

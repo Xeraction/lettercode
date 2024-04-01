@@ -136,11 +136,8 @@ public class Condition {
      */
     public boolean evaluate() {
         if (!isChain) {
-            //clone the values to keep the variables - used for multiple evaluations in loops
-            Value first = this.first.clone();
-            Value second = this.second.clone();
-            first.evaluate();
-            second.evaluate();
+            Value first = this.first.evaluate();
+            Value second = this.second.evaluate();
             //make sure the compared types are compatible (can compare everything except string and other types)
             if (first.getType() != second.getType()) {
                 if ((first.getType() == Value.Type.STRING && second.getType() != Value.Type.STRING)

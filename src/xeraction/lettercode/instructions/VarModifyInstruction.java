@@ -98,8 +98,7 @@ public class VarModifyInstruction implements Instruction {
 
         if (reassign) {
             //evaluate a cloned value to support multiple executions in loops with changing variables
-            Value v = value.clone();
-            v.evaluate();
+            Value v = value.evaluate();
             var.setValue(v);
         } else if (plusplus) {
             var.getValue().modify(Value.Operator.PLUS, Value.ONE.clone());

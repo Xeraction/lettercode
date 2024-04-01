@@ -48,9 +48,7 @@ public class VarInitInstruction implements Instruction {
     }
 
     public void execute() {
-        //evaluate a cloned value to support multiple executions in loops with changing variables
-        Value val = value.clone();
-        val.evaluate();
+        Value val = value.evaluate();
         Variable v = new Variable(name);
         v.setValue(val);
         VariableManager.add(v);

@@ -34,9 +34,7 @@ public class PrintInstruction implements Instruction {
     }
 
     public void execute() {
-        //evaluate a cloned value to support multiple executions in loops with changing variables
-        Value v = value.clone();
-        v.evaluate();
+        Value v = value.evaluate();
         System.out.println(v.toStringValue());
     }
 }
