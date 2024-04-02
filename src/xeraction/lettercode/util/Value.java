@@ -97,52 +97,50 @@ public class Value {
             return this;
         //evaluate a cloned value to allow for multiple evaluations with changed variable contents
         Value v = clone();
-        Couple<Type, String> tv = new Couple<>(Type.UNKNOWN, "");
-        //combine all values into tv in order
-        for (ValuePart part : v.parts) {
-            Type t = part.type();
-            if (t != tv.first()) {
-                //check for cases that need extra processing
-                switch (t) {
-                    case INPUT -> {
-                        Couple<Type, String> in = requestInput();
-                        tv = combine(tv, in.second(), in.first(), part.operator());
-                    }
-                    case VAR -> {
-                        String name = ((VarPart)part).name;
-                        Variable var = VariableManager.get(name);
-                        if (var == null)
-                            Lettercode.error("Unknown variable: " + name);
-                        if (!var.getValue().hasEvaluated())
-                            Lettercode.error("Variable has not been evaluated yet? Probably not your fault...");
-                        tv = combine(tv, var.getValue().toStringValue(), var.getValue().getType(), part.operator());
-                    }
-                    default -> tv = combine(tv, part.toString(), t, part.operator());
-                }
-            } else {
-                tv = combine(tv, part.toString(), t, part.operator());
-            }
-        }
-        //final value is tv -> remove all parts, replace with tv -> evaluation done
-        v.parts.removeIf(p -> true);
-        v.parts.add(constructPart(tv.first(), tv.second()));
+        //first evaluate mult/div, then add/sub
+        evaluate(v.parts, dots);
+        evaluate(v.parts, lines);
         v.evaluated = true;
         return v;
+    }
+
+    private static final List<Operator> dots = List.of(Operator.TIMES, Operator.DIVIDE, Operator.MODULO);
+    private static final List<Operator> lines = List.of(Operator.PLUS, Operator.MINUS);
+
+    /**
+     * Evaluates operations of the specified operator types
+     * @param parts The list of value parts
+     * @param operators The allowed operators
+     */
+    private void evaluate(List<ValuePart> parts, List<Operator> operators) {
+        for (int i = 1; i < parts.size(); i++) {
+            ValuePart part = parts.get(i);
+            ValuePart before = parts.get(i - 1);
+            if (!operators.contains(part.operator()) || part.operator() == Operator.NONE)
+                continue;
+            Couple<Type, String> combined = combine(partToCouple(before), partToCouple(part), part.operator());
+            //set the new part as the first and remove the second
+            parts.set(i - 1, constructPart(combined.first(), combined.second(), before.operator()));
+            parts.remove(i);
+        }
     }
 
     /**
      * Combines two values into one using the specified operator
      * @param in The base value
-     * @param value The modifier value used to change the base value
-     * @param vType The type of the modifier value
+     * @param mod The modifier value
      * @param op The operator for changing the value
-     * @return The combined value
+     * @return The combined value, or the modifier value if in is null
      */
-    private Couple<Type, String> combine(Couple<Type, String> in, String value, Type vType, Operator op) {
+    private Couple<Type, String> combine(Couple<Type, String> in, Couple<Type, String> mod, Operator op) {
+        if (in == null)
+            return mod;
         //type of the base value
         Type cType = in.first();
         //actual value of the base value
         String current = in.second();
+        Type vType = mod.first();
+        String value = mod.second();
         //check all possibilities for combining two value types
         switch (cType) {
             //base value is empty
@@ -291,6 +289,27 @@ public class Value {
             return new Couple<>(Type.BOOLEAN, in);
 
         return new Couple<>(Type.STRING, in);
+    }
+
+    /**
+     * Converts a value part into a couple with its type and string value (accounts for special types)
+     * @param part The input value part
+     * @return The corresponding type-string-couple (I ship it :3)
+     */
+    private Couple<Type, String> partToCouple(ValuePart part) {
+        return switch (part.type()) {
+            case INPUT -> requestInput();
+            case VAR -> {
+                String name = ((VarPart)part).name;
+                Variable var = VariableManager.get(name);
+                if (var == null)
+                    Lettercode.error("Unknown variable: " + name);
+                if (!var.getValue().hasEvaluated())
+                    Lettercode.error("Variable has not been evaluated yet? Probably not your fault...");
+                yield partToCouple(var.getValue().parts.getFirst());
+            }
+            default -> new Couple<>(part.type(), part.toString());
+        };
     }
 
     /**
