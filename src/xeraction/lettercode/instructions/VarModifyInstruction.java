@@ -97,7 +97,6 @@ public class VarModifyInstruction implements Instruction {
             Lettercode.error("Unknown variable: " + name);
 
         if (reassign) {
-            //evaluate a cloned value to support multiple executions in loops with changing variables
             Value v = value.evaluate();
             var.setValue(v);
         } else if (plusplus) {
@@ -105,7 +104,6 @@ public class VarModifyInstruction implements Instruction {
         } else if (minusminus) {
             var.getValue().modify(Value.Operator.MINUS, Value.ONE.clone());
         } else {
-            //modify doesn't evaluate the input value so it's safe to use here
             var.getValue().modify(op, value);
         }
     }

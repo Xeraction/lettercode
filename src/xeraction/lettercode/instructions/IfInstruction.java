@@ -24,7 +24,7 @@ public class IfInstruction implements Instruction {
     private List<Instruction> ifInstructions;
 
     /**
-     * Whether or not the instruction has an else body
+     * Whether the instruction has an else body
      */
     private boolean hasElse = false;
 
@@ -44,6 +44,7 @@ public class IfInstruction implements Instruction {
         //parse the condition
         Condition condition = new Condition();
         condition.parse(iterator);
+
         //parse the code body
         if (iterator.current() != 't')
             Lettercode.error("Expected code body open", iterator);
@@ -59,6 +60,7 @@ public class IfInstruction implements Instruction {
             if (iterator.next() != 't')
                 Lettercode.error("Expected code body open", iterator);
             iterator.next();
+
             List<Instruction> elses = Lettercode.parse(iterator, true);
             inst.hasElse = true;
             inst.elseInstructions = elses;

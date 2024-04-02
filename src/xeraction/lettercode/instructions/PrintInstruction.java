@@ -28,6 +28,7 @@ public class PrintInstruction implements Instruction {
         if (iterator.current() != 'l')
             Lettercode.error("Missing end statement after print instruction", iterator);
         iterator.next();
+
         PrintInstruction inst = new PrintInstruction();
         inst.value = value;
         return inst;

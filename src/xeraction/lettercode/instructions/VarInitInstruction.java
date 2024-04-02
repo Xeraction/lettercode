@@ -32,15 +32,18 @@ public class VarInitInstruction implements Instruction {
         if (!Character.isUpperCase(iterator.next()))
             Lettercode.error("Expected variable name", iterator);
         String name = iterator.getVarName();
+
         if (iterator.current() != 'e')
             Lettercode.error("Expected equal operator", iterator);
         iterator.next();
+
         //parse the value
         Value value = new Value();
         value.parse(iterator);
         if (iterator.current() != 'l')
             Lettercode.error("Missing end statement after variable initialization instruction", iterator);
         iterator.next();
+
         VarInitInstruction inst = new VarInitInstruction();
         inst.name = name;
         inst.value = value;

@@ -43,6 +43,7 @@ public class ForInstruction implements Instruction {
     public Instruction parse(StringIterator iterator) {
         iterator.next();
         ForInstruction inst = new ForInstruction();
+
         //parse the instructions until a "k" is found
         inst.topStart = new ArrayList<>();
         while (iterator.current() != 'k') {
@@ -52,12 +53,14 @@ public class ForInstruction implements Instruction {
             inst.topStart.add(i);
         }
         iterator.next();
+
         //parse the condition
         inst.topCondition = new Condition();
         inst.topCondition.parse(iterator);
         if (iterator.current() != 'k')
             Lettercode.error("Unexpected character in for loop", iterator);
         iterator.next();
+
         //parse the instructions until the code body begins
         inst.topLoop = new ArrayList<>();
         while (iterator.current() != 't') {
@@ -67,6 +70,7 @@ public class ForInstruction implements Instruction {
             inst.topLoop.add(i);
         }
         iterator.next();
+
         //parse the code body
         inst.loop = Lettercode.parse(iterator, true);
         return inst;

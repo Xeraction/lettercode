@@ -30,9 +30,11 @@ public class WhileInstruction implements Instruction {
 
     public Instruction parse(StringIterator iterator) {
         iterator.next();
+
         //parse the condition
         Condition condition = new Condition();
         condition.parse(iterator);
+
         //parse the instruction
         if (iterator.current() != 't')
             Lettercode.error("Expected code body open", iterator);
