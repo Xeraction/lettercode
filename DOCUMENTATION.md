@@ -49,7 +49,7 @@ Variable names must be uppercase. They can contain numbers, but the first charac
 - q = **/** (Used for division)<br>Example: vVARei4i**q**i2il (let var = 4 **/** 2;)
 - y = **%** (Used for modulo)<br>Example: vVARei4i**y**i2il (let var = 4 **%** 2;)
 
-Note that operator precedence does not exist. Values are always evaluated from left to right.
+Mathematical operations follow basic operator precedence.
 
 ### Variable Modification
 Start a statement with an uppercase variable name to make operations on it.
@@ -118,4 +118,5 @@ When a new code body is opened, for example with an if statement, this code body
 a new scope. When you define a variable inside a scope, this variable cannot be accessed outside
 of it.<br>
 Example: jNUMeti42itvVARei1ilzhVARl<br>
-This doesn't work, because "var" was defined inside the if block and is being used outside of it.
+This doesn't work, because "var" was defined inside the if block and is being used outside of it.<br>
+You can also open up new scopes by using t..z anywhere in the code.

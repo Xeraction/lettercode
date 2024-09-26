@@ -113,6 +113,11 @@ public class Value {
      * @param operators The allowed operators
      */
     private void evaluate(List<ValuePart> parts, List<Operator> operators) {
+        if (parts.size() == 1) {
+            Couple<Type, String> comb = partToCouple(parts.getFirst());
+            parts.set(0, constructPart(comb.first(), comb.second()));
+            return;
+        }
         for (int i = 1; i < parts.size(); i++) {
             ValuePart part = parts.get(i);
             ValuePart before = parts.get(i - 1);
