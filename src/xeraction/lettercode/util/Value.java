@@ -9,37 +9,32 @@ import java.util.List;
 /**
  * Represents a value used by variables
  */
-public class Value {
-    /**
-     * The value equivalent of the integer "1"
-     */
-    public static final Value ONE = new Value();
-
-    static {
-        ONE.parts.add(ONE.constructPart(Type.INT, "1"));
-    }
+public abstract class Value {
 
     /**
-     * The different value parts in order
+     * The value succeeding the current one
      */
-    private List<ValuePart> parts;
+    private Value next = null;
 
     /**
-     * Whether this value has been evaluated
+     * The operator of this value
      */
-    private boolean evaluated = false;
+    private Operator operator;
 
-    public Value() {
-        parts = new ArrayList<>();
+    private Value(Operator operator) {
+        this.operator = operator;
     }
 
     /**
      * Parse the value
      * @param iterator The iterator with its position at the first character of the value
      */
-    public void parse(StringIterator iterator) {
+    public static Value parse(StringIterator iterator) {
+
         //parse the starting value (doesn't have an operator)
-        parts.add(parsePart(iterator, Operator.NONE));
+        Value root = parsePart(iterator, Operator.NONE);
+        Value current = root;
+
         while (true) {
             //check for operators and thus subsequent values to be combined into one
             Operator op = switch (iterator.next()) {
@@ -54,8 +49,11 @@ public class Value {
             if (op == Operator.NONE)
                 break;
             iterator.next();
-            parts.add(parsePart(iterator, op));
+            current.next = parsePart(iterator, op);
+            current = current.next;
         }
+
+        return root;
     }
 
     /**
@@ -64,23 +62,23 @@ public class Value {
      * @param operator The operator preceding this value part
      * @return The parsed value part
      */
-    private ValuePart parsePart(StringIterator iterator, Operator operator) {
+    private static Value parsePart(StringIterator iterator, Operator operator) {
         char type = iterator.current();
         //check for variable name
         if (type == Character.toUpperCase(type)) {
             String name = iterator.getVarName(true);
-            return new VarPart(operator, name);
+            return new VarValue(name, operator);
         }
         //check for user input
         if (type == 'u')
-            return new InputPart(operator);
+            return new InputValue(operator);
         String value = iterator.getBetween();
         return switch (type) {
-            case 'i' -> new IntPart(operator, StringUtil.getInt(value));
-            case 'd' -> new DoublePart(operator, StringUtil.getDouble(value));
-            case 's' -> new StringPart(operator, StringUtil.handleStringEscapes(value));
-            case 'c' -> new CharPart(operator, StringUtil.handleCharEscapes(value));
-            case 'b' -> new BoolPart(operator, StringUtil.getBoolean(value));
+            case 'i' -> new IntValue(StringUtil.getInt(value), operator);
+            case 'd' -> new DoubleValue(StringUtil.getDouble(value), operator);
+            case 's' -> new StringValue(StringUtil.handleStringEscapes(value), operator);
+            case 'c' -> new CharValue(StringUtil.handleCharEscapes(value), operator);
+            case 'b' -> new BooleanValue(StringUtil.getBoolean(value), operator);
             default -> {
                 Lettercode.error("Unknown value type '" + type + "'", iterator);
                 yield null;
@@ -92,145 +90,124 @@ public class Value {
      * Evaluates this value
      * @return The evaluated value as a new instance or itself if already evaluated
      */
-    public Value evaluate() {
-        if (evaluated)
-            return this;
-        //evaluate a cloned value to allow for multiple evaluations with changed variable contents
-        Value v = clone();
-        //first evaluate mult/div, then add/sub
-        evaluate(v.parts, dots);
-        evaluate(v.parts, lines);
-        v.evaluated = true;
-        return v;
-    }
+    public String evaluate() {
+        Type type = getType();
+        String value = getValue();
 
-    private static final List<Operator> dots = List.of(Operator.TIMES, Operator.DIVIDE, Operator.MODULO);
-    private static final List<Operator> lines = List.of(Operator.PLUS, Operator.MINUS);
+        if (value.isBlank() || next == null)
+            return value;
 
-    /**
-     * Evaluates operations of the specified operator types
-     * @param parts The list of value parts
-     * @param operators The allowed operators
-     */
-    private void evaluate(List<ValuePart> parts, List<Operator> operators) {
-        if (parts.size() == 1) {
-            Couple<Type, String> comb = partToCouple(parts.getFirst());
-            parts.set(0, constructPart(comb.first(), comb.second()));
-            return;
+        Value nextVal = next;
+
+        while (nextVal != null) {
+            Type nextType = next.getType();
+            String nextValue = next.getValue();
+
+            if (nextType == Type.VAR || nextType == Type.INPUT)
+                nextType = getTypeFromString(nextValue);
+
+            type = mergeTypes(type, nextType);
+            value = appendToValue(value, type, nextValue, nextType, nextVal.operator);
+
+            nextVal = nextVal.next;
         }
-        for (int i = 1; i < parts.size(); i++) {
-            ValuePart part = parts.get(i);
-            ValuePart before = parts.get(i - 1);
-            if (!operators.contains(part.operator()) || part.operator() == Operator.NONE)
-                continue;
-            Couple<Type, String> combined = combine(partToCouple(before), partToCouple(part), part.operator());
-            //set the new part as the first and remove the second
-            parts.set(i - 1, constructPart(combined.first(), combined.second(), before.operator()));
-            parts.remove(i);
-        }
+
+        return value;
     }
 
     /**
-     * Combines two values into one using the specified operator
-     * @param in The base value
-     * @param mod The modifier value
-     * @param op The operator for changing the value
-     * @return The combined value, or the modifier value if in is null
+     * Appends a value to another one
+     * @param value The source value to be appended to
+     * @param valType The type of the source value
+     * @param appendage The value to append
+     * @param appendType The type of the append value
+     * @param op The operator to use
+     * @return The combined value
      */
-    private Couple<Type, String> combine(Couple<Type, String> in, Couple<Type, String> mod, Operator op) {
-        if (in == null)
-            return mod;
-        //type of the base value
-        Type cType = in.first();
-        //actual value of the base value
-        String current = in.second();
-        Type vType = mod.first();
-        String value = mod.second();
-        //check all possibilities for combining two value types
-        switch (cType) {
-            //base value is empty
-            case UNKNOWN -> {
-                current = value;
-                cType = vType;
-            }
-            case INT -> {
-                switch (vType) {
-                    case INT -> current = String.valueOf((int)arithmetic(current, value, op));
-                    case DOUBLE -> {
-                        current = String.valueOf(arithmetic(current, value, op));
-                        cType = Type.DOUBLE;
-                    }
-                    //treat character as its codepoint (int)
-                    case CHAR -> current = String.valueOf((int)arithmetic(current, String.valueOf((int)value.charAt(0)), op));
-                    case BOOLEAN -> {
-                        value = prepBool(value);
-                        current = String.valueOf((int)arithmetic(current, value, op));
-                    }
-                    case STRING -> {
-                        if (op != Operator.PLUS)
-                            Lettercode.error("Unsupported operation for integer and string: " + op.name());
-                        current += value;
-                        cType = Type.STRING;
-                    }
-                }
-            }
-            case DOUBLE -> {
-                switch (vType) {
-                    case INT, DOUBLE -> current = String.valueOf(arithmetic(current, value, op));
-                    //treat character as its codepoint (int)
-                    case CHAR -> current = String.valueOf(arithmetic(current, String.valueOf((int)value.charAt(0)), op));
-                    case BOOLEAN -> {
-                        value = prepBool(value);
-                        current = String.valueOf(arithmetic(current, value, op));
-                    }
-                    case STRING -> {
-                        if (op != Operator.PLUS)
-                            Lettercode.error("Unsupported operation for double and string: " + op.name());
-                        current += value;
-                        cType = Type.STRING;
-                    }
-                }
-            }
-            case CHAR -> {
-                switch (vType) {
-                    case INT -> current = String.valueOf((char)((int)arithmetic(String.valueOf((int)value.charAt(0)), value, op))); //combine integer with codepoint of character -> becomes new character
-                    case DOUBLE -> Lettercode.error("Cannot combine a character with a double");
-                    case CHAR, STRING -> {
-                        if (op != Operator.PLUS)
-                            Lettercode.error("Unsupported operation for character and " + (vType == Type.CHAR ? "character: " : "string: ") + op.name());
-                        current += value;
-                        cType = Type.STRING;
-                    }
-                    case BOOLEAN -> Lettercode.error("Cannot combine a character with a boolean");
-                }
-            }
-            case BOOLEAN -> {
-                switch (vType) {
-                    case INT -> {
-                        current = String.valueOf((int)arithmetic(prepBool(current), value, op));
-                        cType = Type.INT;
-                    }
-                    case DOUBLE -> {
-                        current = String.valueOf(arithmetic(prepBool(current), value, op));
-                        cType = Type.DOUBLE;
-                    }
-                    case CHAR -> Lettercode.error("Cannot combine a boolean with a character");
-                    case BOOLEAN -> Lettercode.error("Cannot combine a boolean with another boolean");
-                    case STRING -> {
-                        if (op != Operator.PLUS)
-                            Lettercode.error("Unsupported operation for boolean and string: " + op.name());
-                        current += value;
-                        cType = Type.STRING;
-                    }
-                }
-            }
-            case STRING -> {
-                if (op != Operator.PLUS)
-                    Lettercode.error("Unsupported operation for string: " + op.name());
-                current += value;
-            }
+    private static String appendToValue(String value, Type valType, String appendage, Type appendType, Operator op) {
+        //if one of the values is a string, concatenate
+        if (valType == Type.STRING || appendType == Type.STRING) {
+            if (op != Operator.PLUS)
+                throw new RuntimeException("Tried to use an operator other than '+' on strings.");
+            return value + appendage;
         }
-        return new Couple<>(cType, current);
+
+        //otherwise, do math
+        return String.valueOf(arithmetic(value, appendage, op));
+    }
+
+    /**
+     * Merges two types into the logically correct one
+     * @param current The root type
+     * @param next The type to be merged into the other
+     * @return The merged type
+     */
+    private Type mergeTypes(Type current, Type next) {
+        if (next.canMergeInto(current))
+            return current;
+        if (current.canMergeInto(next))
+            return next;
+        throw new RuntimeException("Unable to merge types " + current.name() + " and " + next.name());
+    }
+
+    /**
+     * Returns the type of this value
+     * @return The type of this specific value, not the entire chain
+     */
+    private Type getType() {
+        return switch (this) {
+            case StringValue ig -> Type.STRING;
+            case CharValue ig -> Type.CHAR;
+            case IntValue ig -> Type.INT;
+            case DoubleValue ig -> Type.DOUBLE;
+            case BooleanValue ig -> Type.BOOLEAN;
+            case VarValue ig -> Type.VAR;
+            case InputValue ig -> Type.INPUT;
+            default -> Type.UNKNOWN;
+        };
+    }
+
+    /**
+     * Gets the type of a string value
+     * @param val The value
+     * @return The inferred type
+     */
+    public static Type getTypeFromString(String val) {
+        //check all possible types in order from most to least specific
+        try {
+            Integer.parseInt(val);
+            return Type.INT;
+        } catch (Exception ignored) {}
+
+        try {
+            Double.parseDouble(val);
+            return Type.DOUBLE;
+        } catch (Exception ignored) {}
+
+        if (val.length() == 1)
+            return Type.CHAR;
+
+        if (val.equals("true") || val.equals("false"))
+            return Type.BOOLEAN;
+
+        return Type.STRING;
+    }
+
+    /**
+     * Returns the value of this value
+     * @return The value of this specific value, not the entire chain
+     */
+    private String getValue() {
+        return switch (this) {
+            case StringValue sv -> sv.value;
+            case CharValue cv -> String.valueOf(cv.value);
+            case IntValue iv -> String.valueOf(iv.value);
+            case DoubleValue dv -> String.valueOf(dv.value);
+            case BooleanValue bv -> bv.value ? "true" : "false";
+            case VarValue vv -> VariableManager.get(vv.varName).getValue();
+            case InputValue iv -> requestInput();
+            default -> "";
+        };
     }
 
     /**
@@ -240,9 +217,9 @@ public class Value {
      * @param op The operator
      * @return The arithmetic result as a double
      */
-    private double arithmetic(String first, String second, Operator op) {
-        double a = Double.parseDouble(first);
-        double b = Double.parseDouble(second);
+    private static double arithmetic(String first, String second, Operator op) {
+        double a = Double.parseDouble(prepNumber(first));
+        double b = Double.parseDouble(prepNumber(second));
         return switch (op) {
             case PLUS -> a + b;
             case MINUS -> a - b;
@@ -259,179 +236,86 @@ public class Value {
      * @param in The input string
      * @return The output string
      */
-    private String prepBool(String in) {
+    private static String prepNumber(String in) {
         if (in.equals("true"))
             return "1";
         if (in.equals("false"))
             return "0";
+        if (in.length() == 1 && !Character.isDigit(in.charAt(0)))
+            return String.valueOf((int)in.charAt(0));
         return in;
     }
 
     /**
-     * Requests user input and checks its type
-     * @return The input value with its corresponding type
+     * Requests user input
+     * @return The input value
      */
-    private Couple<Type, String> requestInput() {
-        String in = JOptionPane.showInputDialog(null, "The program asked for input.", "Input", JOptionPane.QUESTION_MESSAGE);
-        if (in.isEmpty())
-            return new Couple<>(Type.UNKNOWN, "");
-
-        //check all possible types in order from most to least specific
-        try {
-            Integer.parseInt(in);
-            return new Couple<>(Type.INT, in);
-        } catch (Exception ignored) {}
-
-        try {
-            Double.parseDouble(in);
-            return new Couple<>(Type.DOUBLE, in);
-        } catch (Exception ignored) {}
-
-        if (in.length() == 1)
-            return new Couple<>(Type.CHAR, in);
-
-        if (in.equals("true") || in.equals("false"))
-            return new Couple<>(Type.BOOLEAN, in);
-
-        return new Couple<>(Type.STRING, in);
+    private String requestInput() {
+        return JOptionPane.showInputDialog(null, "The program asked for input.", "Input", JOptionPane.QUESTION_MESSAGE);
     }
 
-    /**
-     * Converts a value part into a couple with its type and string value (accounts for special types)
-     * @param part The input value part
-     * @return The corresponding type-string-couple (I ship it :3)
-     */
-    private Couple<Type, String> partToCouple(ValuePart part) {
-        return switch (part.type()) {
-            case INPUT -> requestInput();
-            case VAR -> {
-                String name = ((VarPart)part).name;
-                Variable var = VariableManager.get(name);
-                if (var == null)
-                    Lettercode.error("Unknown variable: " + name);
-                if (!var.getValue().hasEvaluated())
-                    Lettercode.error("Variable has not been evaluated yet? Probably not your fault...");
-                yield partToCouple(var.getValue().parts.getFirst());
-            }
-            default -> new Couple<>(part.type(), part.toString());
-        };
+    public static String modify(String val, String mod, Operator op) {
+        return appendToValue(val, getTypeFromString(val), mod, getTypeFromString(mod), op);
     }
 
-    /**
-     * Shortcut for the method below with the operator set to none
-     * @param type The type of the value part
-     * @param value The value of the value part
-     * @return The constructed value part
-     */
-    private ValuePart constructPart(Type type, String value) {
-        return constructPart(type, value, Operator.NONE);
+    public static class StringValue extends Value {
+        public final String value;
+
+        public StringValue(String value, Operator op) {
+            super(op);
+            this.value = value;
+        }
     }
 
-    /**
-     * Constructs the appropriate value part from the given information
-     * @param type The type of the value part
-     * @param value The value of the value part
-     * @param op The operator of the value part
-     * @return The constructed value part
-     */
-    private ValuePart constructPart(Type type, String value, Operator op) {
-        return switch (type) {
-            case INT -> new IntPart(op, Integer.parseInt(value));
-            case DOUBLE -> new DoublePart(op, Double.parseDouble(value));
-            case BOOLEAN -> new BoolPart(op, value.equals("true") || value.equals("1"));
-            case CHAR -> new CharPart(op, value.charAt(0));
-            case INPUT -> new InputPart(op);
-            case VAR -> new VarPart(op, value);
-            default -> new StringPart(op, value);
-        };
+    public static class CharValue extends Value {
+        public final char value;
+
+        public CharValue(char value, Operator op) {
+            super(op);
+            this.value = value;
+        }
     }
 
-    /**
-     * Modifies this value - combines this value with another and a given operator and evaluates it
-     * @param op The combination operator
-     * @param value The value to be combined with
-     */
-    public void modify(Operator op, Value value) {
-        evaluated = false;
-        ValuePart first = value.parts.getFirst();
-        first = constructPart(first.type(), first.toString(), op);
-        parts.add(first);
-        for (int i = 1; i < value.parts.size(); i++)
-            parts.add(value.parts.get(i));
-        //unfortunate workaround but whatever
-        Value v = evaluate();
-        parts = v.parts;
-        evaluated = true;
+    public static class IntValue extends Value {
+        public final int value;
+
+        public IntValue(int value, Operator op) {
+            super(op);
+            this.value = value;
+        }
     }
 
-    public boolean hasEvaluated() {
-        return evaluated;
+    public static class DoubleValue extends Value {
+        public final double value;
+
+        public DoubleValue(double value, Operator op) {
+            super(op);
+            this.value = value;
+        }
     }
 
-    public Type getType() {
-        return parts.getFirst().type();
+    public static class BooleanValue extends Value {
+        public final boolean value;
+
+        public BooleanValue(boolean value, Operator op) {
+            super(op);
+            this.value = value;
+        }
     }
 
-    public int getAsInt() {
-        return ((IntPart)parts.getFirst()).value;
+    public static class VarValue extends Value {
+        public final String varName;
+
+        public VarValue(String varName, Operator op) {
+            super(op);
+            this.varName = varName;
+        }
     }
 
-    public double getAsDouble() {
-        return ((DoublePart)parts.getFirst()).value;
-    }
-
-    public char getAsChar() {
-        return ((CharPart)parts.getFirst()).value;
-    }
-
-    public boolean getAsBool() {
-        return ((BoolPart)parts.getFirst()).value;
-    }
-
-    /**
-     * Returns the string representation of the value
-     * @return The string representation if evaluated<br>
-     * The value of the first value part if not evaluated
-     */
-    public String toStringValue() {
-        return parts.getFirst().toString();
-    }
-
-    /**
-     * A value part without operators
-     */
-    private interface ValuePart {
-        Operator operator();
-        Type type();
-    }
-
-    private record IntPart(Operator operator, int value) implements ValuePart {
-        public Type type() {return Type.INT;}
-        public String toString() {return String.valueOf(value);}
-    }
-    private record DoublePart(Operator operator, double value) implements ValuePart {
-        public Type type() {return Type.DOUBLE;}
-        public String toString() {return String.valueOf(value);}
-    }
-    private record StringPart(Operator operator, String value) implements ValuePart {
-        public Type type() {return Type.STRING;}
-        public String toString() {return value;}
-    }
-    private record CharPart(Operator operator, char value) implements ValuePart {
-        public Type type() {return Type.CHAR;}
-        public String toString() {return String.valueOf(value);}
-    }
-    private record BoolPart(Operator operator, boolean value) implements ValuePart {
-        public Type type() {return Type.BOOLEAN;}
-        public String toString() {return value ? "true" : "false";}
-    }
-    private record VarPart(Operator operator, String name) implements ValuePart {
-        public Type type() {return Type.VAR;}
-        public String toString() {return name;}
-    }
-    private record InputPart(Operator operator) implements ValuePart {
-        public Type type() {return Type.INPUT;}
-        public String toString() {return "";}
+    public static class InputValue extends Value {
+        public InputValue(Operator op) {
+            super(op);
+        }
     }
 
     /**
@@ -445,18 +329,29 @@ public class Value {
      * The types a value can be
      */
     public enum Type {
-        STRING, CHAR, INT, DOUBLE, BOOLEAN, VAR, INPUT, UNKNOWN
-    }
+        STRING,
+        DOUBLE(STRING),
+        INT(DOUBLE, STRING),
+        CHAR(INT, DOUBLE, STRING),
+        BOOLEAN(CHAR, INT, DOUBLE, STRING),
+        VAR(BOOLEAN, CHAR, INT, DOUBLE, STRING),
+        INPUT(BOOLEAN, CHAR, INT, DOUBLE, STRING),
+        UNKNOWN;
 
-    /**
-     * Creates a new instance of this value
-     * @return A cloned value with the same properties
-     */
-    public Value clone() {
-        Value v = new Value();
-        v.evaluated = evaluated;
-        v.parts = new ArrayList<>();
-        v.parts.addAll(parts);
-        return v;
+        private final Type[] canMergeInto;
+
+        Type(Type... canMergeInto) {
+            this.canMergeInto = canMergeInto;
+        }
+
+        public boolean canMergeInto(Type other) {
+            if (canMergeInto == null)
+                return false;
+
+            for (Type t : canMergeInto)
+                if (t.equals(other))
+                    return true;
+            return false;
+        }
     }
 }

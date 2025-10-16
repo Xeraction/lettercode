@@ -77,8 +77,7 @@ public class Condition {
     private Condition parsePartCondition(StringIterator iterator) {
         Condition cond = new Condition();
         //parse the first comparison value
-        cond.first = new Value();
-        cond.first.parse(iterator);
+        cond.first = Value.parse(iterator);
         //parse the conditional operator
         cond.op = switch (iterator.current()) {
             case 'e' -> {
@@ -116,8 +115,7 @@ public class Condition {
         };
         iterator.next();
         //parse the second comparison value
-        cond.second = new Value();
-        cond.second.parse(iterator);
+        cond.second = Value.parse(iterator);
         return cond;
     }
 
@@ -136,19 +134,21 @@ public class Condition {
      */
     public boolean evaluate() {
         if (!isChain) {
-            Value first = this.first.evaluate();
-            Value second = this.second.evaluate();
+            String first = this.first.evaluate();
+            String second = this.second.evaluate();
+            Value.Type firstType = Value.getTypeFromString(first);
+            Value.Type secondType = Value.getTypeFromString(second);
             //make sure the compared types are compatible (can compare everything except string and other types)
-            if (first.getType() != second.getType()) {
-                if ((first.getType() == Value.Type.STRING && second.getType() != Value.Type.STRING)
-                        || (first.getType() != Value.Type.STRING && second.getType() == Value.Type.STRING))
-                    Lettercode.error("Cannot compare these variable types: " + first.getType().name() + " and " + second.getType().name());
+            if (firstType != secondType) {
+                if ((firstType == Value.Type.STRING && secondType != Value.Type.STRING)
+                        || (firstType != Value.Type.STRING && secondType == Value.Type.STRING))
+                    Lettercode.error("Cannot compare these variable types: " + firstType.name() + " and " + secondType.name());
             }
             //do the comparisons
-            switch (first.getType()) {
+            switch (firstType) {
                 case INT, DOUBLE, CHAR, BOOLEAN -> {
-                    double val1 = getDoubleVal(first);
-                    double val2 = getDoubleVal(second);
+                    double val1 = getDoubleVal(first, firstType);
+                    double val2 = getDoubleVal(second, secondType);
                     return switch (op) {
                         case EQUAL -> val1 == val2;
                         case NEQUAL -> val1 != val2;
@@ -160,12 +160,10 @@ public class Condition {
                     };
                 }
                 case STRING -> {
-                    String val1 = first.toStringValue();
-                    String val2 = first.toStringValue();
                     //string values only allow checking for equality
                     switch (op) {
-                        case EQUAL -> {return val1.equals(val2);}
-                        case NEQUAL -> {return !val1.equals(val2);}
+                        case EQUAL -> {return first.equals(second);}
+                        case NEQUAL -> {return !first.equals(second);}
                         default -> Lettercode.error("You can only compare two strings for equality!");
                     }
                 }
@@ -190,14 +188,14 @@ public class Condition {
      * @param value The value - has to be of type int, double, boolean, or character
      * @return The value converted to a double
      */
-    private double getDoubleVal(Value value) {
-        if (value.getType() == Value.Type.INT)
-            return value.getAsInt();
-        if (value.getType() == Value.Type.DOUBLE)
-            return value.getAsDouble();
-        if (value.getType() == Value.Type.BOOLEAN)
-            return value.getAsBool() ? 1 : 0;
-        return (int)value.getAsChar();
+    private double getDoubleVal(String value, Value.Type type) {
+        if (type == Value.Type.INT)
+            return Integer.parseInt(value);
+        if (type == Value.Type.DOUBLE)
+            return Double.parseDouble(value);
+        if (type == Value.Type.BOOLEAN)
+            return value.equals("true") ? 1 : 0;
+        return (int)value.charAt(0);
     }
 
     /**

@@ -12,17 +12,17 @@ public class Variable {
     /**
      * The value of the variable
      */
-    private Value value;
+    private String value;
 
     public Variable(String name) {
         this.name = name;
     }
 
-    public void setValue(Value value) {
+    public void setValue(String value) {
         this.value = value;
     }
 
-    public Value getValue() {
+    public String getValue() {
         return value;
     }
 

@@ -38,8 +38,7 @@ public class VarInitInstruction implements Instruction {
         iterator.next();
 
         //parse the value
-        Value value = new Value();
-        value.parse(iterator);
+        Value value = Value.parse(iterator);
         if (iterator.current() != 'l')
             Lettercode.error("Missing end statement after variable initialization instruction", iterator);
         iterator.next();
@@ -51,7 +50,7 @@ public class VarInitInstruction implements Instruction {
     }
 
     public void execute() {
-        Value val = value.evaluate();
+        String val = value.evaluate();
         Variable v = new Variable(name);
         v.setValue(val);
         VariableManager.add(v);

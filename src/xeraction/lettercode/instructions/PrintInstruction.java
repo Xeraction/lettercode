@@ -23,8 +23,7 @@ public class PrintInstruction implements Instruction {
     public Instruction parse(StringIterator iterator) {
         iterator.next();
         //parse the value
-        Value value = new Value();
-        value.parse(iterator);
+        Value value = Value.parse(iterator);
         if (iterator.current() != 'l')
             Lettercode.error("Missing end statement after print instruction", iterator);
         iterator.next();
@@ -35,7 +34,6 @@ public class PrintInstruction implements Instruction {
     }
 
     public void execute() {
-        Value v = value.evaluate();
-        System.out.println(v.toStringValue());
+        System.out.println(value.evaluate());
     }
 }

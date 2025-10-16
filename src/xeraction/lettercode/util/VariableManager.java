@@ -39,7 +39,7 @@ public class VariableManager {
         for (Variable v : variables)
             if (v.getName().equals(name))
                 return v;
-        return null;
+        throw new RuntimeException("Tried to access invalid variable: \"" + name + "\"");
     }
 
     /**

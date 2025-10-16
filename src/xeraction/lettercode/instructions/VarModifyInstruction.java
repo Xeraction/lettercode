@@ -80,8 +80,7 @@ public class VarModifyInstruction implements Instruction {
 
         //there's no value with pp or mm
         if (!plusplus && !minusminus) {
-            value = new Value();
-            value.parse(iterator);
+            value = Value.parse(iterator);
         }
 
         if (iterator.current() != 'l')
@@ -97,14 +96,14 @@ public class VarModifyInstruction implements Instruction {
             Lettercode.error("Unknown variable: " + name);
 
         if (reassign) {
-            Value v = value.evaluate();
+            String v = value.evaluate();
             var.setValue(v);
         } else if (plusplus) {
-            var.getValue().modify(Value.Operator.PLUS, Value.ONE.clone());
+            var.setValue(Value.modify(var.getValue(), "1", Value.Operator.PLUS));
         } else if (minusminus) {
-            var.getValue().modify(Value.Operator.MINUS, Value.ONE.clone());
+            var.setValue(Value.modify(var.getValue(), "1", Value.Operator.MINUS));
         } else {
-            var.getValue().modify(op, value);
+            var.setValue(Value.modify(var.getValue(), value.evaluate(), op));
         }
     }
 }
